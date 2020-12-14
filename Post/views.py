@@ -16,7 +16,7 @@ class CreatePostView(APIView):
             'roomType', 'numberOfRoom', 'price', 'square', 'withOwner',
             'bathroomType', 'kitchen', 'airconditioner', 'balcony',
             'utility', 'other', 'host_id', 'hostName', 'hostPhoneNumber', 
-            'is_confirmed', 'numberOfRented']
+            'is_confirmed', 'numberOfRented', 'images']
     
     def post(self, request, format=None):
         serializer = self.CreatePostSerializer(data=request.data)
@@ -33,7 +33,7 @@ class UpdatePostView(APIView):
             fields = ['detailAddress', 'describeAddress', 
             'roomType', 'numberOfRoom', 'price', 'square', 'withOwner',
             'bathroomType', 'kitchen', 'airconditioner', 'balcony',
-            'utility', 'other']
+            'utility', 'other', 'numberOfRented', 'images']
     def put(self, request, pk, format=None):
         post = Post.objects.get(pk=pk)
         if(post.is_confirmed is False):
