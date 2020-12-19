@@ -1,20 +1,32 @@
 from django.db import models
 from Account.models import Host, MyUser
 
+# class PostManager(models.Manager):
+#     def search(self, cỉteria):
+#         qlookup = ''
+#         for i in citeria:
+
 ROOM_TYPE = [
-    ('pt', "phòng trọ"),
-    ('cc', "chung cư mini"),
-    ('n', "nhà nguyên căn"),
-    ('ccnc', "chung cư nguyên căn")
+    ('phòng trọ', "phòng trọ"),
+    ('chung cư mini', "chung cư mini"),
+    ('nhà nguyên căn', "nhà nguyên căn"),
+    ('chung cư nguyên căn', "chung cư nguyên căn")
 ]
+
+RENT_TIME = [
+    ('tháng', 'tháng'),
+    ('quý', 'quý'),
+    ('năm', 'năm'),
+]
+
 BATH_ROOM = [
-    ('kk', "khép kín"),
-    ('c', "chung")
+    ('khép kín', "khép kín"),
+    ('chung', "chung")
 ]
 KITCHEN = [
-    ('r', "khu bếp riêng"),
-    ('c', "khu bếp chung"),
-    ('k', "không nấu ăn")
+    ('khu bếp riêng', "khu bếp riêng"),
+    ('khu bếp chung', "khu bếp chung"),
+    ('không nấu ăn', "không nấu ăn")
 ]
 
 class Post(models.Model):
@@ -27,27 +39,33 @@ class Post(models.Model):
     numberOfRented = models.PositiveIntegerField(default=0)
 
     price = models.PositiveIntegerField()
+    rent_time = models.CharField(max_length=10, choices=RENT_TIME)
 
-    square = models.PositiveIntegerField
+    square = models.PositiveIntegerField(default=0)
 
     withOwner = models.BooleanField()
 
     bathroomType = models.CharField(max_length=20, choices=BATH_ROOM)
-    #nóng lạnh
+    
+    heater = models.BooleanField()
+
     kitchen = models.CharField(max_length=50, choices=KITCHEN)
 
     airconditioner = models.BooleanField()
+
     balcony = models.BooleanField()
 
-    utility = models.PositiveIntegerField()
+    water_price = models.PositiveIntegerField()
+    electricity_price = models.PositiveIntegerField()
 
     other = models.CharField(max_length=200, null=True, blank=True)
 
     images = models.TextField(blank=True)
 
-    host_id = models.ForeignKey(Host, related_name='host_of_this_post', on_delete=models.CASCADE)
-    hostName = models.CharField(max_length=50)
-    hostPhoneNumber = models.CharField(max_length=50)
+    hostName = models.ForeignKey(Host, related_name='hostName', on_delete=models.CASCADE)
+
+    expiredDate = models.DateTimeField()
+    
     is_confirmed = models.BooleanField(default=False)
 
 

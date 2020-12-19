@@ -4,36 +4,116 @@ from rest_framework import serializers
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
+from django.core.validators import RegexValidator
+from EasyAccomd.permissions import ViewAndChangePermission, IsRenter
+from datetime import datetime, timedelta, timezone, tzinfo
+
+detailAddress_validator=('^[a-zA-ZÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚĂĐĨŨƠàáâãèéêìíòóôõùúăđĩũơƯĂẠẢẤẦẨẪẬẮẰẲẴẶẸẺẼỀỀỂẾưăạảấầẩẫậắằẳẵặẹẻẽềềểếỄỆỈỊỌỎỐỒỔỖỘỚỜỞỠỢỤỦỨỪễệỉịọỏốồổỗộớờởỡợụủứừỬỮỰỲỴÝỶỸửữựỳỵỷỹ0-9,\s]+$')
+describeAddress_validator=('^[a-zA-ZÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚĂĐĨŨƠàáâãèéêìíòóôõùúăđĩũơƯĂẠẢẤẦẨẪẬẮẰẲẴẶẸẺẼỀỀỂẾưăạảấầẩẫậắằẳẵặẹẻẽềềểếỄỆỈỊỌỎỐỒỔỖỘỚỜỞỠỢỤỦỨỪễệỉịọỏốồổỗộớờởỡợụủứừỬỮỰỲỴÝỶỸửữựỳỵỷỹ0-9,\s]+$')
+other_validator=('^[a-zA-ZÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚĂĐĨŨƠàáâãèéêìíòóôõùúăđĩũơƯĂẠẢẤẦẨẪẬẮẰẲẴẶẸẺẼỀỀỂẾưăạảấầẩẫậắằẳẵặẹẻẽềềểếỄỆỈỊỌỎỐỒỔỖỘỚỜỞỠỢỤỦỨỪễệỉịọỏốồổỗộớờởỡợụủứừỬỮỰỲỴÝỶỸửữựỳỵỷỹ0-9,\s]+$')
+
+
+ROOM_TYPE = [
+    ('phòng trọ', "phòng trọ"),
+    ('chung cư mini', "chung cư mini"),
+    ('nhà nguyên căn', "nhà nguyên căn"),
+    ('chung cư nguyên căn', "chung cư nguyên căn")
+]
+
+RENT_TIME = [
+    ('tháng', 'tháng'),
+    ('quý', 'quý'),
+    ('năm', 'năm'),
+]
+
+BATH_ROOM = [
+    ('khép kín', "khép kín"),
+    ('chung', "chung")
+]
+KITCHEN = [
+    ('khu bếp riêng', "khu bếp riêng"),
+    ('khu bếp chung', "khu bếp chung"),
+    ('không nấu ăn', "không nấu ăn")
+]
+
 
 class CreatePostView(APIView):
+    permission_classes = (IsRenter,)
     class CreatePostSerializer(serializers.ModelSerializer):
-        host_id = serializers.PrimaryKeyRelatedField(queryset=Host.objects.all(), many=True)
-        hostName =serializers.CharField(read_only=True)
-        hostPhoneNumber = serializers.CharField(read_only=True)
+        hostName =serializers.SlugRelatedField(read_only=True, slug_field='fullname', many=True)
+        detailAddress = serializers.CharField(
+            validators=[RegexValidator(regex=detailAddress_validator)]
+        )
+        describeAddress = serializers.CharField(
+            validators=[RegexValidator(regex=describeAddress_validator)]
+        )
+        roomType = serializers.ChoiceField(choices=ROOM_TYPE)
+        numberOfRoom = serializers.IntegerField()
+        price = serializers.IntegerField()
+        rent_time = serializers.ChoiceField(choices=RENT_TIME)
+        square = serializers.IntegerField()
+        withOwner = serializers.BooleanField()
+        bathroomType = serializers.ChoiceField(choices=BATH_ROOM)
+        heater = serializers.BooleanField()
+        kitchen = serializers.ChoiceField(choices=KITCHEN)
+        airconditioner =serializers.BooleanField()
+        balcony = serializers.BooleanField()
+        water_price = serializers.IntegerField()
+        electricity_price = serializers.IntegerField()
+        other = serializers.CharField(
+            validators=[RegexValidator(regex=other_validator)]
+        )
+        images = serializers.CharField()
+        expiredDate = serializers.IntegerField()
         class Meta:
             model = Post
             fields = ['id', 'detailAddress', 'describeAddress', 
-            'roomType', 'numberOfRoom', 'price', 'square', 'withOwner',
-            'bathroomType', 'kitchen', 'airconditioner', 'balcony',
-            'utility', 'other', 'host_id', 'hostName', 'hostPhoneNumber', 
-            'is_confirmed', 'numberOfRented', 'images']
+            'roomType', 'numberOfRoom', 'price', 'rent_time', 'square', 'withOwner',
+            'bathroomType','heater', 'kitchen', 'airconditioner', 'balcony',
+            'water_price','electricity_price', 'other', 'hostName', 
+            'is_confirmed', 'numberOfRented', 'images', 'expiredDate']
     
+
     def post(self, request, format=None):
         serializer = self.CreatePostSerializer(data=request.data)
         if(serializer.is_valid()):
             user = Host.objects.get(email=request.user.email)
-            serializer.save(host_id = user, hostName=user.fullname, hostPhoneNumber=user.phoneNumber, is_confirmed=False, numberOfRented=0)
+            serializer.save(hostName=user, is_confirmed=False, numberOfRented=0, expiredDate = datetime.now()+timedelta(days=serializer.validated_data['expiredDate']))
             return Response(f'ok')
         return Response(f'not ok')
 
 class UpdatePostView(APIView):
+    # permission_classes = (ViewAndChangePermission,)
     class UpdatePostSerializer(serializers.ModelSerializer):
+        detailAddress = serializers.CharField(
+            validators=[RegexValidator(regex=detailAddress_validator)]
+        )
+        describeAddress = serializers.CharField(
+            validators=[RegexValidator(regex=describeAddress_validator)]
+        )
+        roomType = serializers.ChoiceField(choices=ROOM_TYPE)
+        numberOfRoom = serializers.IntegerField()
+        price = serializers.IntegerField()
+        rent_time = serializers.ChoiceField(choices=RENT_TIME)
+        square = serializers.IntegerField()
+        withOwner = serializers.BooleanField()
+        bathroomType = serializers.ChoiceField(choices=BATH_ROOM)
+        heater = serializers.BooleanField()
+        kitchen = serializers.ChoiceField(choices=KITCHEN)
+        airconditioner =serializers.BooleanField()
+        balcony = serializers.BooleanField()
+        water_price = serializers.IntegerField()
+        electricity_price = serializers.IntegerField()
+        other = serializers.CharField(
+            validators=[RegexValidator(regex=other_validator)]
+        )
+        images = serializers.CharField()
         class Meta:
             model = Post
             fields = ['detailAddress', 'describeAddress', 
-            'roomType', 'numberOfRoom', 'price', 'square', 'withOwner',
-            'bathroomType', 'kitchen', 'airconditioner', 'balcony',
-            'utility', 'other', 'numberOfRented', 'images']
+            'roomType', 'numberOfRoom', 'price', 'rent_time' ,'square', 'withOwner',
+            'bathroomType', 'heater','kitchen', 'airconditioner', 'balcony',
+            'water_price','electricity_price', 'other', 'numberOfRented', 'images']
     def put(self, request, pk, format=None):
         post = Post.objects.get(pk=pk)
         if(post.is_confirmed is False):
@@ -44,7 +124,9 @@ class UpdatePostView(APIView):
         return Response(f'not ok')
 
 class UpdateRentStatusView(APIView):
+    # permission_classes = (ViewAndChangePermission,)
     class UpdateRentStatusSerializer(serializers.ModelSerializer):
+        numberOfRented = serializers.IntegerField()
         class Meta:
             model = Post
             fields = ['numberOfRented']
@@ -60,17 +142,36 @@ class UpdateRentStatusView(APIView):
                     return Response(f'ok')
         return Response(f'not ok')
 
-# class ExtendExpiredDateView(APIView):
+class ExtendExpiredDateView(APIView):
+    class ExtendExpiredDateSerializer(serializers.ModelSerializer):
+        expiredDate = serializers.IntegerField()
+        class Meta:
+            model = Post
+            fields = ['expiredDate']
+    
+    def put(self, request, pk, format=None):
+        post = Post.objects.get(pk = pk)
+        if(post.expiredDate.replace(tzinfo=None)<datetime.now().replace(tzinfo=None)):
+            serializer = self.ExtendExpiredDateSerializer(post, data=request.data)
+            if(serializer.is_valid()):
+                serializer.save(is_confirmed=False, expiredDate = datetime.now()+timedelta(days=serializer.validated_data['expiredDate']))
+                return(Response(f'ok'))
+            return Response(f'serializer not valid')
+        return Response(f'this post has not expired yet')
 
 class HostPostListView(APIView):
     class HostPostListSerializer(serializers.ModelSerializer):
         class Meta:
             model = Post
             fields = ['detailAddress', 'numberOfRoom']
-    def get(self, request, format=None):
-        hostPostList = Post.objects.filter(host_id=request.user)
+    def get(self, request,begin, end, format=None):
+        hostPostList = Post.objects.filter(host_id=request.user)[begin:end]
         serializer = self.HostPostListSerializer(hostPostList, many=True)
-        return Response(serializer.data)
+        response = {
+            'data':serializer.data,
+            'hasNext':len(serializer.data)==end-begin
+        }
+        return Response(response)
 
 class PostDetailView(APIView):
     class PostDetailSerializer(serializers.ModelSerializer):
@@ -81,6 +182,68 @@ class PostDetailView(APIView):
     def get(self, request, pk, format=None):
         postDetail = Post.objects.get(pk=pk)
         serializer = self.PostDetailSerializer(postDetail)
-        return Response(serializer.data)
+        host = Host.objects.get(pk= serializer.data['hostName'])
+        response = {
+            'post':serializer.data,
+            'hostName':host.fullname,
+            'phoneNumber': host.phoneNumber
+        }
+        return Response(response)
 
-# class SearchByCiteria(APIView):
+class SearchByCiteria(APIView):
+    class SearchSerializer(serializers.ModelSerializer):
+        class Meta:
+            model = Post
+            fields = ['detailAddress']
+
+    def get(self, request, address, describeAddress, price, roomType, square, kitchen, bathroom, heater, airconditioner, begin, end, format=None):
+        result = Post.objects.filter(
+            detailAddress__contains=address,
+            describeAddress__contains= describeAddress,
+            price=price,
+            roomType=roomType,
+            square=square,
+            kitchen=kitchen,
+            bathroomType=bathroom,
+            heater=heater,
+            airconditioner=airconditioner
+        )[begin:end]
+        serializer = self.SearchSerializer(result, many=True)
+        response = {
+            'data':serializer.data,
+            'hasNext':len(serializer.data)==end-begin
+        }
+        return Response(response)
+    
+
+class Search(APIView):
+    class SearchSerializer(serializers.ModelSerializer):
+        class Meta:
+            model = Post
+            fields = ['detailAddress']
+    
+    def get(self, request, searching, begin, end, format=None):
+        result = Post.objects.filter(detailAddress__contains=searching)[begin:end]
+        serializer = self.SearchSerializer(result, many=True)
+        response = {
+            'data':serializer.data,
+            'hasNext':len(serializer.data)==end-begin
+        }
+        return Response(response)
+# for admin only
+
+class ConfirmedPost(APIView):
+    class ConfirmedPostSerializer(serializers.ModelSerializer):
+        class Meta:
+            model = Post
+            fields = ['is_confirmed']
+    
+    def put(self, request, pk, format=None):
+        post = Post.objects.get(pk=pk)
+        serializer = self.ConfirmedPostSerializer(post, data=request.data)
+        if(serializer.is_valid()):
+            serializer.save()
+            return Response(f'ok')
+        return Response(f'not ok')
+
+

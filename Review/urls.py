@@ -5,6 +5,6 @@ from Review import views
 urlpatterns = [
     path('createReview/', views.CreateReviewView.as_view()),
     path('delete/<int:pk>/', views.DeleteReviewView.as_view()),
-    path('listReviewOfPost/<int:pk>/', views.ListReviewOfPost.as_view()),
+    path('listReviewOfPost/<int:pk>/<int:begin>/<int:end>/', views.ListReviewOfPost.as_view()),
     path('listReviewOfRenter/', views.ListReviewOfRenter.as_view()),
 ]

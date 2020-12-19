@@ -8,17 +8,19 @@ from Chat.models import Thread, ChatMessage
 class ChatConsumer(AsyncConsumer):
     async def websocket_connect(self, event):
         print('connected', event)
-        other_user = self.scope['url_route']['kwargs']['username']
-        email = self.scope['url_route']['kwargs']['email']
+        other_user = self.scope['url_route']['kwargs']['receiver_username']
+        email = self.scope['url_route']['kwargs']['sender_username']
         user = await self.get_sender(email)
+        self.sender = user
         other_user = await self.get_receiver(other_user)
 
         print(other_user.username)
         print (user.username)
         
         thread_obj = await self.get_thread(user, other_user.username)
+        self.thread_obj = thread_obj
 
-        chat_room = f'{user.username}_to_{other_user.username}'
+        chat_room = f'{thread_obj.id}'
         self.chat_room = chat_room
         await self.channel_layer.group_add(
             chat_room, 
@@ -33,6 +35,7 @@ class ChatConsumer(AsyncConsumer):
         print('received', event)
         front_text = event.get('text', None)
         if(front_text is not None):
+            await self.create_new_message(front_text)
             await self.channel_layer.group_send(
                 self.chat_room,
                 {
@@ -56,9 +59,15 @@ class ChatConsumer(AsyncConsumer):
         return Thread.objects.get_or_new(user, other_username)[0]
 
     @database_sync_to_async
-    def get_sender(self, email):
-        return MyUser.objects.get(email=email)
+    def get_sender(self, username):
+        return MyUser.objects.get(username=username)
 
     @database_sync_to_async
     def get_receiver(self, username):
         return MyUser.objects.get(username=username)
+
+    @database_sync_to_async
+    def create_new_message(self, msg):
+        thread = self.thread_obj
+        me = self.sender
+        return ChatMessage.objects.create(thread=thread, user=me, message=msg)

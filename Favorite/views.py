@@ -38,10 +38,14 @@ class FavoriteList(APIView):
             model = Favorite
             fields = ['post_id']
 
-    def get(self, request, format=None):
-        favoriteList = Favorite.objects.filter(renter_id=request.user)
+    def get(self, request, begin, end, format=None):
+        favoriteList = Favorite.objects.filter(renter_id=request.user)[begin:end]
         serializer = self.FavoriteListSerializer(favoriteList, many=True)
-        return Response(serializer.data)
+        response ={
+            'data':serializer.data,
+            'hasNext':len(serializer.data)==end-begin
+        }
+        return Response(response)
 
 class FavoriteCountView(APIView):
     def get(self,request, pk, format=None):

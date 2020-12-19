@@ -12,5 +12,9 @@ urlpatterns = [
     path('hostUpdateProfile/', views.HostUpdateProfileView.as_view()),
     path('changePassword/', views.ChangePasswordView.as_view()),
     path('allUser/<int:begin>/<int:end>/', views.AllUser.as_view()),
+    path('admin/confirmedhostlist/<int:begin>/<int:end>/', views.GetListHost.as_view()),
+    path('admin/unconfirmedhostlist/<int:begin>/<int:end>/', views.GetUnconfirmedHost.as_view()),
+    path('admin/confirmhost/<int:pk>/', views.ConfirmedHostAccount.as_view()),
+    path('admin/allowupdate/<int:pk>/', views.AllowUpdatePermission.as_view()),
 
 ]
