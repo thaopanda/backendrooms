@@ -32,7 +32,8 @@ class LoginView(APIView):
         email = serializers.CharField(max_length=255)
         password = serializers.CharField(max_length=128, write_only=True)
         token = serializers.CharField(max_length=255, read_only=True)
-        
+        user_type = serializers.CharField(max_length=10, read_only=True)
+
         def validate(self, data):
             email = data.get('email', None)
             password = data.get('password', None)
@@ -46,7 +47,8 @@ class LoginView(APIView):
             update_last_login(None, user)
             return{
                 'email': user.email,
-                'token':jwt_token
+                'token':jwt_token,
+                'user_type':user.user_type,
             }
     def post(self, request, format=None):
         serializer = self.LoginViewSerializer(data=request.data)
@@ -56,6 +58,7 @@ class LoginView(APIView):
             'message': 'User logged in  successfully',
             'email': serializer.data['email'],
             'token' : serializer.data['token'],
+            'user_type':serializer.data['user_type']
             }
             return Response(response)
         return Response(f'not ok')
@@ -79,19 +82,6 @@ class HostRegistrationView(APIView):
                                     phoneNumber=serializer.validated_data['phoneNumber'])
             return Response(serializer.data)
         return Response(serializer.errors)
-
-class AllUserView(APIView):
-    permission_classes = (IsAuthenticated,)
-    authentication_class = JSONWebTokenAuthentication
-    class AllUserSerializer(serializers.ModelSerializer):
-        class Meta:
-            model = Host
-            fields = ['email', 'username', 'password', 'last_login']
-    
-    def get(self, request, format = None):
-        allUser = Host.objects.all()
-        serializer = self.AllUserSerializer(allUser, many = True)
-        return Response(serializer.data)
 
 class RenterProfileView(APIView):
     permission_classes = (IsAuthenticated,)
@@ -153,16 +143,38 @@ class ChangePasswordView(APIView):
     permission_classes = (IsAuthenticated,)
     class ChangePasswordSerializer(serializers.ModelSerializer):
         password = serializers.CharField()
+        new_password = serializers.CharField()
         class Meta:
             model = MyUser
-            fields = ['password']
+            fields = ['password', 'new_password']
     def put(self, request, format=None):
         user = MyUser.objects.get(email=request.user.email)
-        newPassword = self.ChangePasswordSerializer(user, data=request.data)
-        if(newPassword.is_valid()):
-            user.set_password(newPassword.validated_data['password'])
+        changePassword = self.ChangePasswordSerializer(user, data=request.data)
+        if(changePassword.is_valid()):
+            if(user.check_password(changePassword.validated_data['password']) is False):
+                return Response(f'incorrect old password')
+            if(changePassword.validated_data['password']==changePassword.validated_data['new_password']):
+                return Response(f'new password must be different from old password')
+            user.set_password(changePassword.validated_data['new_password'])
             user.save()
             return Response(f'ok')
         return Response(f'not ok')
+
+class AllUser(APIView):
+    permission_classes = (AllowAny,)
+    class AllUserSerializer(serializers.ModelSerializer):
+        class Meta:
+            model = MyUser
+            fields = ['username']
+
+    def get(self, request, begin, end,  format=None):
+        Profile = MyUser.objects.filter(user_type='renter').order_by("username")[begin:end]
+        print(Profile)
+        serializer = self.AllUserSerializer(Profile, many=True)
+        response = {
+            'data':serializer.data,
+            'hasNext': len(serializer.data) == end - begin
+        }
+        return Response(response)
 
 # class ResetPasswordView(APIView):

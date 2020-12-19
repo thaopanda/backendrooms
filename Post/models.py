@@ -42,7 +42,9 @@ class Post(models.Model):
     utility = models.PositiveIntegerField()
 
     other = models.CharField(max_length=200, null=True, blank=True)
-    # images = models.ImageField(blank=True)
+
+    images = models.TextField(blank=True)
+
     host_id = models.ForeignKey(Host, related_name='host_of_this_post', on_delete=models.CASCADE)
     hostName = models.CharField(max_length=50)
     hostPhoneNumber = models.CharField(max_length=50)

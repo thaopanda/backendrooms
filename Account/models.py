@@ -1,7 +1,12 @@
 from django.db import models
 from django.contrib.auth.models import BaseUserManager, AbstractBaseUser
 
-USER_TYPE = [(_, _) for _ in ('Host', 'Renter')]
+
+USER_TYPE = [
+    ('renter', "renter"),
+    ('host', "host"),
+    ('admin', "admin"),
+]
 
 class UserManager(BaseUserManager):
  
@@ -25,7 +30,7 @@ class UserManager(BaseUserManager):
         return user
  
 
-class RenterAndAdminManager(BaseUserManager):
+class RenterManager(BaseUserManager):
     def create_user(self, email, username, password=None):
         if not email:
             raise ValueError('User must have an email address')
@@ -35,6 +40,22 @@ class RenterAndAdminManager(BaseUserManager):
             email = self.normalize_email(email),
             username = username,
         )
+        user.user_type = "renter"
+        user.set_password(password)
+        user.save(using=self._db)
+        return user
+
+class AdminManager(BaseUserManager):
+    def create_user(self, email, username, password=None):
+        if not email:
+            raise ValueError('User must have an email address')
+        if not username:
+            raise ValueError('User must have a username')
+        user = self.model(
+            email = self.normalize_email(email),
+            username = username,
+        )
+        user.user_type = "admin"
         user.set_password(password)
         user.save(using=self._db)
         return user
@@ -62,12 +83,13 @@ class HostManager(BaseUserManager):
             address = address,
             phoneNumber = phoneNumber,
         )
+        user.user_type = "host"
         user.set_password(password)
         user.save(using=self._db)
         return user
 
 class MyUser(AbstractBaseUser):
-    # user_type = models.CharField(choices=USER_TYPE, null=False, blank=False)
+    user_type = models.CharField(choices=USER_TYPE, null=False, blank=False, max_length=10)
     date_joined = models.DateTimeField(verbose_name='date joined', auto_now_add=True)
     last_login = models.DateTimeField(verbose_name='last login', auto_now=True)
     email = models.EmailField(verbose_name='email', max_length=60, unique=True)
@@ -119,6 +141,11 @@ class Renter(MyUser):
     def __str__(self):
         return self.username
 
-    objects = RenterAndAdminManager()
+    objects = RenterManager()
+
+class Admin(MyUser):
+    USERNAME_FIELD = 'email'
+    REQUIRED_FIELDS = ['username']
+    objects = AdminManager()
 
 
