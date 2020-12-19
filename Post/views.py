@@ -164,8 +164,8 @@ class HostPostListView(APIView):
         class Meta:
             model = Post
             fields = ['detailAddress', 'numberOfRoom']
-    def get(self, request,begin, end, format=None):
-        hostPostList = Post.objects.filter(host_id=request.user)[begin:end]
+    def get(self, request, begin, end, format=None):
+        hostPostList = Post.objects.filter(hostName=request.user)[begin:end]
         serializer = self.HostPostListSerializer(hostPostList, many=True)
         response = {
             'data':serializer.data,
@@ -215,7 +215,6 @@ class SearchByCiteria(APIView):
         }
         return Response(response)
     
-
 class Search(APIView):
     class SearchSerializer(serializers.ModelSerializer):
         class Meta:
@@ -230,6 +229,22 @@ class Search(APIView):
             'hasNext':len(serializer.data)==end-begin
         }
         return Response(response)
+        
+class HomePageView(APIView):
+    class HomePageSerializer(serializers.ModelSerializer):
+        class Meta:
+            model = Post
+            fields = ['detailAddress']
+    
+    def get(self, request, location, begin, end, format=None):
+        result = Post.objects.filter(detailAddress__contains=location)[begin:end]
+        serializer = self.SearchSerializer(result, many=True)
+        response = {
+            'data':serializer.data,
+            'hasNext':len(serializer.data)==end-begin
+        }
+        return Response(response)
+
 # for admin only
 
 class ConfirmedPost(APIView):

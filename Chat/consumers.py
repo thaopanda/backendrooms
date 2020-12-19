@@ -71,3 +71,39 @@ class ChatConsumer(AsyncConsumer):
         thread = self.thread_obj
         me = self.sender
         return ChatMessage.objects.create(thread=thread, user=me, message=msg)
+
+class AllUserChatConsumer(AsyncConsumer):
+    async def websocket_connect(self, event):
+        print('connected', event)
+        chat_room = f'allUser'
+        self.chat_room = chat_room
+        await self.channel_layer.group_add(
+            chat_room, 
+            self.channel_name
+        )
+        await self.send({
+            "type":"websocket.accept"
+        })
+
+    async def websocket_receive(self, event):
+        print('received', event)
+        front_text = event.get('text', None)
+        if(front_text is not None):
+            await self.channel_layer.group_send(
+                self.chat_room,
+                {
+                    "type":"chat_message",
+                    "text":front_text
+                }
+            )
+
+    async def chat_message(self, event):
+        print("message message")
+        await self.send({
+            "type":"websocket.send",
+            "text":event["text"]
+        })
+
+    async def websocket_disconnect(self, event):
+        print('disconnected', event)
+    

@@ -23,4 +23,6 @@ from . import consumers
 
 websocket_urlpatterns = [
     re_path(r"^messages/(?P<sender_username>[\w.@+-]+)/(?P<receiver_username>[\w.@+-]+)/$", consumers.ChatConsumer.as_asgi()),
+    re_path(r"^messages/allUser/$", consumers.AllUserChatConsumer.as_asgi()),
+
 ]
