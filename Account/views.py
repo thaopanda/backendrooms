@@ -7,14 +7,37 @@ from django.contrib.auth.models import update_last_login
 from rest_framework_jwt.settings import api_settings
 from rest_framework_jwt.authentication import JSONWebTokenAuthentication
 from django.contrib.auth import authenticate
-
+from rest_framework.validators import UniqueValidator
+from django.core.validators import RegexValidator
+from EasyAccomd.permissions import ViewAndChangePermission, IsOwner, IsRenter, IsHost
+from datetime import datetime, timedelta
 
 JWT_PAYLOAD_HANDLER = api_settings.JWT_PAYLOAD_HANDLER
 JWT_ENCODE_HANDLER = api_settings.JWT_ENCODE_HANDLER
 
+username_validator = ('^[a-zA-ZÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚĂĐĨŨƠàáâãèéêìíòóôõùúăđĩũơƯĂẠẢẤẦẨẪẬẮẰẲẴẶẸẺẼỀỀỂẾưăạảấầẩẫậắằẳẵặẹẻẽềềểếỄỆỈỊỌỎỐỒỔỖỘỚỜỞỠỢỤỦỨỪễệỉịọỏốồổỗộớờởỡợụủứừỬỮỰỲỴÝỶỸửữựỳỵỷỹ0-9_\s]+$')
+email_validator = ('^[a-zA-Z0-9]+@[a-zA-Z.]+$')
+fullname_validator = ('^[a-zA-ZÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚĂĐĨŨƠàáâãèéêìíòóôõùúăđĩũơƯĂẠẢẤẦẨẪẬẮẰẲẴẶẸẺẼỀỀỂẾưăạảấầẩẫậắằẳẵặẹẻẽềềểếỄỆỈỊỌỎỐỒỔỖỘỚỜỞỠỢỤỦỨỪễệỉịọỏốồổỗộớờởỡợụủứừỬỮỰỲỴÝỶỸửữựỳỵỷỹ\s]+$')
+identication_validator =('^[0-9]{12}$')
+phoneNumber_validator = ('^[0]{1}[0-9]{9}$')
+address_validator = ('^[a-zA-ZÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚĂĐĨŨƠàáâãèéêìíòóôõùúăđĩũơƯĂẠẢẤẦẨẪẬẮẰẲẴẶẸẺẼỀỀỂẾưăạảấầẩẫậắằẳẵặẹẻẽềềểếỄỆỈỊỌỎỐỒỔỖỘỚỜỞỠỢỤỦỨỪễệỉịọỏốồổỗộớờởỡợụủứừỬỮỰỲỴÝỶỸửữựỳỵỷỹ0-9,\s]+$')
+interested_area_validator = ('^[a-zA-ZÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚĂĐĨŨƠàáâãèéêìíòóôõùúăđĩũơƯĂẠẢẤẦẨẪẬẮẰẲẴẶẸẺẼỀỀỂẾưăạảấầẩẫậắằẳẵặẹẻẽềềểếỄỆỈỊỌỎỐỒỔỖỘỚỜỞỠỢỤỦỨỪễệỉịọỏốồổỗộớờởỡợụủứừỬỮỰỲỴÝỶỸửữựỳỵỷỹ0-9,\s]+$')
+
+
 class RenterRegistrationView(APIView):
     permission_classes = (AllowAny,)
     class RenterRegistrationSerializer(serializers.ModelSerializer):
+        username = serializers.CharField(
+            max_length=30, 
+            validators=[UniqueValidator(queryset=MyUser.objects.all()),
+                        RegexValidator(regex=username_validator)]
+        )
+        email = serializers.EmailField(
+            validators=[UniqueValidator(queryset=MyUser.objects.all()),
+                        RegexValidator(regex=email_validator)],
+            max_length=60
+        )
+        password = serializers.CharField(min_length=8)
         class Meta:
             model = Renter
             fields = ['id', 'email', 'username', 'password']
@@ -29,8 +52,8 @@ class RenterRegistrationView(APIView):
 class LoginView(APIView):
     permission_classes = (AllowAny,)
     class LoginViewSerializer(serializers.Serializer):
-        email = serializers.CharField(max_length=255)
-        password = serializers.CharField(max_length=128, write_only=True)
+        email = serializers.EmailField(max_length=255)
+        password = serializers.CharField(max_length=128, write_only=True, min_length=8)
         token = serializers.CharField(max_length=255, read_only=True)
         user_type = serializers.CharField(max_length=10, read_only=True)
 
@@ -65,8 +88,29 @@ class LoginView(APIView):
 
 class HostRegistrationView(APIView):
     permission_classes = (AllowAny,)
-
     class HostRegistrationSerializer(serializers.ModelSerializer):
+        email = serializers.EmailField(
+            validators=[RegexValidator(regex=email_validator)]
+        )
+        username = serializers.CharField(
+            validators=[RegexValidator(regex=username_validator)]
+        )
+        password = serializers.CharField(min_length=8)
+        identication = serializers.CharField(
+            validators=[RegexValidator(regex=identication_validator), 
+                        UniqueValidator(queryset=Host.objects.all())]
+        )
+        phoneNumber = serializers.CharField(
+            validators=[RegexValidator(regex=phoneNumber_validator), 
+                        UniqueValidator(queryset=Host.objects.all())]
+        )
+        address = serializers.CharField(
+            validators=[RegexValidator(regex=address_validator)]
+        )
+        fullname = serializers.CharField(
+            validators=[RegexValidator(regex=fullname_validator)],
+            max_length=50
+        )
         class Meta:
             model = Host
             fields = ['id', 'email', 'username', 'password', 'fullname', 'identication', 'address', 'phoneNumber']
@@ -84,7 +128,7 @@ class HostRegistrationView(APIView):
         return Response(serializer.errors)
 
 class RenterProfileView(APIView):
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (IsRenter,)
     
     class RenterProfileSerializer(serializers.ModelSerializer):
         class Meta:
@@ -98,7 +142,7 @@ class RenterProfileView(APIView):
         return Response(serializer.data)
 
 class HostProfileView(APIView):
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (IsHost,)
     
     class HostProfileSerializer(serializers.ModelSerializer):
         class Meta:
@@ -112,7 +156,14 @@ class HostProfileView(APIView):
         return Response(serializer.data)
 
 class RenterUpdateProfileView(APIView):
+    permission_classes = (IsAuthenticated,ViewAndChangePermission,)
     class RenterUpdateProfileSerializer(serializers.ModelSerializer):
+        fullname = serializers.CharField(
+            validators=[RegexValidator(regex=fullname_validator)]
+        )
+        interested_area = serializers.CharField(
+            validators=[RegexValidator(regex=interested_area_validator)]
+        )
         class Meta:
             model = Renter
             fields = ['fullname', 'interested_area']
@@ -125,8 +176,21 @@ class RenterUpdateProfileView(APIView):
         return Response(serializer.errors)
 
 class HostUpdateProfileView(APIView):
+    permission_classes = (IsAuthenticated, ViewAndChangePermission,)
     class HostUpdateProfileSerializer(serializers.ModelSerializer):
-        # fullname = serializers.CharField(required=True)
+        fullname = serializers.CharField(
+            required=True,
+            validators=[RegexValidator(regex=fullname_validator)]
+        )
+        identication = serializers.CharField(
+            validators=[RegexValidator(regex=identication_validator)]
+        )
+        phoneNumber = serializers.CharField(
+            validators=[RegexValidator(regex=phoneNumber_validator)]
+        )
+        address = serializers.CharField(
+            validators=[RegexValidator(regex=address_validator)]
+        )
         class Meta:
             model = Host
             fields = ['fullname', 'identication', 'address', 'phoneNumber']
@@ -140,10 +204,10 @@ class HostUpdateProfileView(APIView):
         return Response(serializer.errors)
 
 class ChangePasswordView(APIView):
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (ViewAndChangePermission,)
     class ChangePasswordSerializer(serializers.ModelSerializer):
-        password = serializers.CharField()
-        new_password = serializers.CharField()
+        password = serializers.CharField(min_length=8)
+        new_password = serializers.CharField(min_length=8)
         class Meta:
             model = MyUser
             fields = ['password', 'new_password']
@@ -168,9 +232,9 @@ class AllUser(APIView):
             fields = ['username']
 
     def get(self, request, begin, end,  format=None):
-        Profile = MyUser.objects.filter(user_type='renter').order_by("username")[begin:end]
-        print(Profile)
-        serializer = self.AllUserSerializer(Profile, many=True)
+        profile = MyUser.objects.filter(user_type='renter').order_by("username")[begin:end]
+        print(profile)
+        serializer = self.AllUserSerializer(profile, many=True)
         response = {
             'data':serializer.data,
             'hasNext': len(serializer.data) == end - begin
@@ -178,3 +242,64 @@ class AllUser(APIView):
         return Response(response)
 
 # class ResetPasswordView(APIView):
+
+
+#API for admin only
+class GetListHost(APIView):
+    class ListHostSerializer(serializers.ModelSerializer):
+        class Meta:
+            model = Host
+            fields = ['username', 'email', 'fullname', 'identication', 'address', 'phoneNumber']
+
+    def get(self, request, begin, end, format=None):
+        HostList = Host.objects.filter(is_confirmed=True).order_by('date_joined')[begin:end]
+        serializer = self.ListHostSerializer(HostList, many=True)
+        response = {
+            'data':serializer.data,
+            'hasNext': len(serializer.data) == end - begin
+        }
+        return Response(response)
+
+class GetUnconfirmedHost(APIView):
+    class UnconfirmedHostSerializer(serializers.ModelSerializer):
+        class Meta:
+            model = Host
+            fields = ['username', 'email', 'fullname', 'identication', 'address', 'phoneNumber']
+
+    def get(self, request, begin, end, format=None):
+        HostList = Host.objects.filter(is_confirmed=False).order_by('date_joined')[begin:end]
+        serializer = self.UnconfirmedHostSerializer(HostList, many=True)
+        response = {
+            'data':serializer.data,
+            'hasNext': len(serializer.data) == end - begin
+        }
+        return Response(response)
+
+class ConfirmedHostAccount(APIView):
+    class ConfirmedHostSerializer(serializers.ModelSerializer):
+        class Meta:
+            model = Host
+            fields = ['is_confirmed']
+    
+    def put(self, request, pk, format=None):
+        host = Host.objects.get(pk=pk)
+        serializer = self.ConfirmedHostSerializer(host, data=request.data)
+        if(serializer.is_valid()):
+            serializer.save()
+            return Response(f'ok')
+        return Response(f'not ok')
+
+class AllowUpdatePermission(APIView):
+    class AllowUpdatePermissionSerializer(serializers.ModelSerializer):
+        class Meta:
+            model = Host
+            fields = ['has_update_permission']
+    
+    def put(self, request, pk, format=None):
+        host = Host.objects.get(pk=pk)
+        serializer = self.AllowUpdatePermissionSerializer(host, data=request.data)
+        if(serializer.is_valid()):
+            serializer.save(is_confirmed=False)
+            return Response(f'ok')
+        return Response(f'not ok')
+

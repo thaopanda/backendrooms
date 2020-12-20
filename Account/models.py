@@ -8,6 +8,12 @@ USER_TYPE = [
     ('admin', "admin"),
 ]
 
+GENDER = [
+    ('male', 'male'),
+    ('female', 'female'),
+    ('other', 'other')
+]
+
 class UserManager(BaseUserManager):
  
     def get_by_natural_key(self, email):
@@ -84,6 +90,7 @@ class HostManager(BaseUserManager):
             phoneNumber = phoneNumber,
         )
         user.user_type = "host"
+        user.has_update_permission = False
         user.set_password(password)
         user.save(using=self._db)
         return user
@@ -121,6 +128,7 @@ class Host(MyUser):
     address = models.CharField(max_length=100)
     phoneNumber = models.CharField(max_length=20, unique=True)
     is_confirmed = models.BooleanField(default=False)
+    has_update_permission = models.BooleanField(default=True)
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['username', 'fullname', 'identication', 'address', 'phoneNumber']
@@ -134,7 +142,8 @@ class Host(MyUser):
 class Renter(MyUser):
     fullname = models.CharField(max_length=50, unique=False, blank=True, null=True)
     interested_area = models.CharField(max_length=200, unique=False, blank=True, null=True)
-    
+    gender = models.CharField(max_length=10, choices=GENDER, blank=True, null=True)
+
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['username']
     

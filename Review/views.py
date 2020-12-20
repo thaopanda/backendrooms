@@ -5,11 +5,16 @@ from rest_framework import serializers
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
+from django.core.validators import RegexValidator
 
+rating_validator = ('^[1-5]{1}$')
+comment_validator = ('^[a-zA-zÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚĂĐĨŨƠàáâãèéêìíòóôõùúăđĩũơƯĂẠẢẤẦẨẪẬẮẰẲẴẶẸẺẼỀỀỂẾưăạảấầẩẫậắằẳẵặẹẻẽềềểếỄỆỈỊỌỎỐỒỔỖỘỚỜỞỠỢỤỦỨỪễệỉịọỏốồổỗộớờởỡợụủứừỬỮỰỲỴÝỶỸửữựỳỵỷỹ0-9\s]+$')
 class CreateReviewView(APIView):
     class CreateReviewSerializer(serializers.ModelSerializer):
         renter_id = serializers.PrimaryKeyRelatedField(queryset=Renter.objects.all(), many=True)
         post_id = serializers.PrimaryKeyRelatedField(queryset=Post.objects.all(), many=False)
+        rating = serializers.IntegerField(validators=[RegexValidator(regex=rating_validator)])
+        comment = serializers.CharField(validators=[RegexValidator(regex=comment_validator)])
         class Meta:
             model = Review
             fields = ['renter_id', 'post_id', 'rating', 'comment']
@@ -36,10 +41,14 @@ class ListReviewOfPost(APIView):
             model = Review
             fields = ['renter_id', 'rating', 'comment']
 
-    def get(self, request, pk, format=None):
-        reviewList = Review.objects.filter(post_id=pk, is_confirmed=True)
+    def get(self, request, pk, begin, end, format=None):
+        reviewList = Review.objects.filter(post_id=pk, is_confirmed=True)[begin:end]
         serializer = self.ListReviewOfPostSerializer(reviewList, many=True)
-        return Response(serializer.data)
+        response = {
+            'data':serializer.data,
+            'hasNext':len(serializer.data)==end-begin
+        }
+        return Response(response)
 
 class ListReviewOfRenter(APIView):
     permission_classes = (IsAuthenticated,)
