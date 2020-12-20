@@ -9,6 +9,7 @@ urlpatterns = [
     path('hostPostList/<int:begin>/<int:end>/', views.HostPostListView.as_view()),
     path('postDetail/<int:pk>/', views.PostDetailView.as_view()),
     path('extendExpiredDate/<int:pk>/', views.ExtendExpiredDateView.as_view()),
+    path('homePage/<str:location>/<int:begin>/<int:end>/', views.HomePageView.as_view()),
     path('search/<str:searching>/<int:begin>/<int:end>/', views.Search.as_view()),
     path('searchByCiteria/<str:address>/<str:describeAddress>/<int:price>/<str:roomType>/<int:square>/<str:kitchen>/<str:bathroom>/<str:heater>/<str:airconditioner>/<int:begin>/<int:end>/', views.SearchByCiteria.as_view()),
     path('admin/confirmpost/<int:pk>', views.ConfirmedPost.as_view()),
