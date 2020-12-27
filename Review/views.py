@@ -11,19 +11,18 @@ rating_validator = ('^[1-5]{1}$')
 comment_validator = ('^[a-zA-zÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚĂĐĨŨƠàáâãèéêìíòóôõùúăđĩũơƯĂẠẢẤẦẨẪẬẮẰẲẴẶẸẺẼỀỀỂẾưăạảấầẩẫậắằẳẵặẹẻẽềềểếỄỆỈỊỌỎỐỒỔỖỘỚỜỞỠỢỤỦỨỪễệỉịọỏốồổỗộớờởỡợụủứừỬỮỰỲỴÝỶỸửữựỳỵỷỹ0-9\s]+$')
 class CreateReviewView(APIView):
     class CreateReviewSerializer(serializers.ModelSerializer):
-        renter_id = serializers.PrimaryKeyRelatedField(queryset=Renter.objects.all(), many=True)
-        post_id = serializers.PrimaryKeyRelatedField(queryset=Post.objects.all(), many=False)
         rating = serializers.IntegerField(validators=[RegexValidator(regex=rating_validator)])
         comment = serializers.CharField(validators=[RegexValidator(regex=comment_validator)])
         class Meta:
             model = Review
-            fields = ['renter_id', 'post_id', 'rating', 'comment']
+            fields = ['id', 'rating', 'comment']
     
-    def post(self, request, format=None):
+    def post(self, request,pk, format=None):
         serializer = self.CreateReviewSerializer(data=request.data)
         if(serializer.is_valid()):
             user = Renter.objects.get(email=request.user.email)
-            serializer.save(renter_id=user)
+            post = Post.objects.get(pk=pk)
+            serializer.save(renter_id=user, post_id=post)
             return Response(f'ok')
         return Response(f'not ok')
 

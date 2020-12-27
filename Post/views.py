@@ -36,6 +36,16 @@ KITCHEN = [
     ('không nấu ăn', "không nấu ăn")
 ]
 
+def transformToString(images_Array):
+    images_string=''
+    for i in images_Array:
+        images_string+=i+'&'
+    return(images_string)
+
+def transformToArray(images_string):
+    images_array = images_string.split("&")
+    images_array.pop(len(images_array)-1)
+    return images_array
 
 class CreatePostView(APIView):
     permission_classes = (IsRenter,)
@@ -63,7 +73,7 @@ class CreatePostView(APIView):
         other = serializers.CharField(
             validators=[RegexValidator(regex=other_validator)]
         )
-        images = serializers.CharField()
+        # images = serializers.CharField()
         expiredDate = serializers.IntegerField()
         class Meta:
             model = Post
@@ -71,13 +81,17 @@ class CreatePostView(APIView):
             'roomType', 'numberOfRoom', 'price', 'rent_time', 'square', 'withOwner',
             'bathroomType','heater', 'kitchen', 'airconditioner', 'balcony',
             'water_price','electricity_price', 'other', 'hostName', 
-            'is_confirmed', 'numberOfRented', 'images', 'expiredDate']
+            'is_confirmed', 'numberOfRented','expiredDate']
     
 
     def post(self, request, format=None):
         serializer = self.CreatePostSerializer(data=request.data)
-        print(serializer)
+        print(serializer.initial_data)
         if(serializer.is_valid()):
+            
+            images = serializer.initial_data['images']
+            print(images)
+            serializer.validated_data['images']=transformToString(images)
             user = Host.objects.get(email=request.user.email)
             serializer.save(hostName=user, is_confirmed=False, numberOfRented=0, expiredDate = datetime.now()+timedelta(days=serializer.validated_data['expiredDate']))
             return Response(f'ok')
@@ -168,6 +182,9 @@ class HostPostListView(APIView):
     def get(self, request, format=None):
         hostPostList = Post.objects.filter(hostName=request.user)
         serializer = self.HostPostListSerializer(hostPostList, many=True)
+        for i in serializer.data:
+            i['images']=transformToArray(i['images'])
+        # serializer.data['images']=transformToArray(serializer.data['images'])
         response = {
             'data':serializer.data,
             # 'hasNext':len(serializer.data)==end-begin
@@ -181,21 +198,22 @@ class PostDetailView(APIView):
             fields = '__all__'
     
     def get(self, request, pk, format=None):
-        postDetail = Post.objects.get(pk=pk)
-        serializer = self.PostDetailSerializer(postDetail)
-        host = Host.objects.get(pk= serializer.data['hostName'])
+        postDetail = Post.objects.filter(pk=pk)
+        serializer = self.PostDetailSerializer(postDetail, many=True)
+        for i in serializer.data:
+            i['images']=transformToArray(i['images'])
+            i['hostName']=Host.objects.get(pk=i['hostName']).fullname 
+
         response = {
-            'post':serializer.data,
-            'hostName':host.fullname,
-            'phoneNumber': host.phoneNumber
+            # 'host':host.fullname,
+            'data':serializer.data[0],
         }
         return Response(response)
-
 class SearchByCiteria(APIView):
     class SearchSerializer(serializers.ModelSerializer):
         class Meta:
             model = Post
-            fields = ['detailAddress']
+            fields = ['id','detailAddress', 'hostName', 'images']
 
     def get(self, request, address, describeAddress, price, roomType, square, kitchen, bathroom, heater, airconditioner, begin, end, format=None):
         result = Post.objects.filter(
@@ -210,27 +228,61 @@ class SearchByCiteria(APIView):
             airconditioner=airconditioner
         )[begin:end]
         serializer = self.SearchSerializer(result, many=True)
+        # host = Host.objects.get(pk=serializer.data['hostName'])
+        for i in serializer.data:
+            i['images']=transformToArray(i['images'])
+            i['hostName']=Host.objects.get(pk=i['hostName']).fullname 
+
         response = {
+            # 'host':host.fullname,
             'data':serializer.data,
             'hasNext':len(serializer.data)==end-begin
         }
         return Response(response)
     
-
 class Search(APIView):
     class SearchSerializer(serializers.ModelSerializer):
         class Meta:
             model = Post
-            fields = ['detailAddress']
+            fields = ['id','detailAddress', 'hostName', 'images']
     
     def get(self, request, searching, begin, end, format=None):
         result = Post.objects.filter(detailAddress__contains=searching)[begin:end]
         serializer = self.SearchSerializer(result, many=True)
+
+        for i in serializer.data:
+            i['images']=transformToArray(i['images'])
+            i['hostName']=Host.objects.get(pk=i['hostName']).fullname 
+
         response = {
+            # 'host':host.fullname,
             'data':serializer.data,
             'hasNext':len(serializer.data)==end-begin
         }
         return Response(response)
+        
+class HomePageView(APIView):
+    class HomePageSerializer(serializers.ModelSerializer):
+        class Meta:
+            model = Post
+            fields = ['detailAddress','id','hostName', 'images']
+    
+    def get(self, request, location, begin, end, format=None):
+        result = Post.objects.filter(detailAddress__contains=location)[begin:end]
+        serializer = self.HomePageSerializer(result, many=True)
+        
+        for i in serializer.data:
+            i['images']=transformToArray(i['images'])
+            i['hostName']=Host.objects.get(pk=i['hostName']).fullname 
+
+        response = {
+            # 'host':host.fullname,
+            'data':serializer.data,
+            'hasNext':len(serializer.data)==end-begin
+        }
+        return Response(response)
+        
+
 # for admin only
 
 class ConfirmedPost(APIView):

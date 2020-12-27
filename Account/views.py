@@ -52,6 +52,7 @@ class RenterRegistrationView(APIView):
 class LoginView(APIView):
     permission_classes = (AllowAny,)
     class LoginViewSerializer(serializers.Serializer):
+        username = serializers.CharField(read_only=True)
         email = serializers.EmailField(max_length=255)
         password = serializers.CharField(max_length=128, write_only=True, min_length=8)
         token = serializers.CharField(max_length=255, read_only=True)
@@ -69,6 +70,7 @@ class LoginView(APIView):
             jwt_token = JWT_ENCODE_HANDLER(payload)
             update_last_login(None, user)
             return{
+                'username':user.username,
                 'email': user.email,
                 'token':jwt_token,
                 'user_type':user.user_type,
@@ -79,6 +81,7 @@ class LoginView(APIView):
             response = {
             'success' : 'True',
             'message': 'User logged in  successfully',
+            'username':serializer.data['username'],
             'email': serializer.data['email'],
             'token' : serializer.data['token'],
             'user_type':serializer.data['user_type']
