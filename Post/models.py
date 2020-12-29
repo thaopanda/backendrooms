@@ -29,6 +29,7 @@ KITCHEN = [
     ('không nấu ăn', "không nấu ăn")
 ]
 
+
 class Post(models.Model):
     detailAddress = models.CharField(max_length=200, null=False, blank=False)
     describeAddress = models.CharField(max_length=200)
@@ -67,5 +68,9 @@ class Post(models.Model):
     expiredDate = models.DateTimeField()
     
     is_confirmed = models.BooleanField(default=False)
+
+    total_views = models.PositiveIntegerField(default=0)
+    
+    total_like = models.PositiveIntegerField(default=0)
 
 

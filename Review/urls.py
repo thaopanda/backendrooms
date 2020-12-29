@@ -7,4 +7,6 @@ urlpatterns = [
     path('delete/<int:pk>/', views.DeleteReviewView.as_view()),
     path('listReviewOfPost/<int:pk>/<int:begin>/<int:end>/', views.ListReviewOfPost.as_view()),
     path('listReviewOfRenter/', views.ListReviewOfRenter.as_view()),
+    path('listReview/', views.ListReview.as_view()),
+    path('confirmReview/<int:pk>/', views.ConfirmReview.as_view()),
 ]

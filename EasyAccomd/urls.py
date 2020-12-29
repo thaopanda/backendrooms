@@ -25,4 +25,5 @@ urlpatterns = [
     path('review/', include('Review.urls')),
     path('report/', include('Report.urls')),
     path('chat/', include('Chat.urls')),
+    path('views/', include('Views.urls')),
 ]

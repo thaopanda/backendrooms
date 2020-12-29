@@ -175,8 +175,8 @@ class RenterUpdateProfileView(APIView):
         serializer = self.RenterUpdateProfileSerializer(renter, data=request.data)
         if(serializer.is_valid()):
             serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors)
+            return Response(f'ok')
+        return Response(f'not ok')
 
 class HostUpdateProfileView(APIView):
     permission_classes = (IsAuthenticated, ViewAndChangePermission,)
@@ -231,16 +231,14 @@ class AllUser(APIView):
     permission_classes = (AllowAny,)
     class AllUserSerializer(serializers.ModelSerializer):
         class Meta:
-            model = MyUser
+            model = Host
             fields = ['username']
 
-    def get(self, request, begin, end,  format=None):
-        profile = MyUser.objects.filter(user_type='renter').order_by("username")[begin:end]
-        print(profile)
+    def get(self, request, format=None):
+        profile = Host.objects.all()
         serializer = self.AllUserSerializer(profile, many=True)
         response = {
             'data':serializer.data,
-            'hasNext': len(serializer.data) == end - begin
         }
         return Response(response)
 
@@ -252,7 +250,7 @@ class GetListHost(APIView):
     class ListHostSerializer(serializers.ModelSerializer):
         class Meta:
             model = Host
-            fields = ['username', 'email', 'fullname', 'identication', 'address', 'phoneNumber']
+            fields = ['id','username', 'email', 'fullname', 'identication', 'address', 'phoneNumber']
 
     def get(self, request, begin, end, format=None):
         HostList = Host.objects.filter(is_confirmed=True).order_by('date_joined')[begin:end]
@@ -267,7 +265,7 @@ class GetUnconfirmedHost(APIView):
     class UnconfirmedHostSerializer(serializers.ModelSerializer):
         class Meta:
             model = Host
-            fields = ['username', 'email', 'fullname', 'identication', 'address', 'phoneNumber']
+            fields = ['id','username', 'email', 'fullname', 'identication', 'address', 'phoneNumber']
 
     def get(self, request, begin, end, format=None):
         HostList = Host.objects.filter(is_confirmed=False).order_by('date_joined')[begin:end]
@@ -288,7 +286,7 @@ class ConfirmedHostAccount(APIView):
         host = Host.objects.get(pk=pk)
         serializer = self.ConfirmedHostSerializer(host, data=request.data)
         if(serializer.is_valid()):
-            serializer.save()
+            serializer.save(is_confirmed=True)
             return Response(f'ok')
         return Response(f'not ok')
 
@@ -302,7 +300,7 @@ class AllowUpdatePermission(APIView):
         host = Host.objects.get(pk=pk)
         serializer = self.AllowUpdatePermissionSerializer(host, data=request.data)
         if(serializer.is_valid()):
-            serializer.save(is_confirmed=False)
+            serializer.save(has_update_permission=True, is_confirmed=False)
             return Response(f'ok')
         return Response(f'not ok')
 

@@ -3,6 +3,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from Chat.models import Thread, ChatMessage
+from Account.models import Host
 
 class GetThread(APIView):
     class ThreadSerializer(serializers.ModelSerializer):
@@ -31,3 +32,14 @@ class GetChat(APIView):
         }
         return Response(response)
 
+class GetThreadAdmin(APIView):
+    class ThreadSerializer(serializers.ModelSerializer):
+        class Meta:
+            model = Thread
+            fields = '__all__'
+
+    def get(self, request, username, format=None):
+        user = Host.objects.get(username=username)
+        thread = Thread.objects.by_user(user=user)
+        serializer = self.ThreadSerializer(thread, many=True)
+        return Response(serializer.data)

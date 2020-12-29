@@ -61,3 +61,26 @@ class ListReviewOfRenter(APIView):
         reviewList = Review.objects.filter(renter_id=request.user)
         serializer = self.ListReviewOfRenterSerializer(reviewList, many=True)
         return Response(serializer.data)
+
+#for admin
+class ListReview(APIView):
+    permission_classes = (IsAuthenticated,)
+    class ListReviewOfRenterSerializer(serializers.ModelSerializer):
+        post_id = serializers.SlugRelatedField(read_only=True,slug_field='detailAddress')
+        class Meta:
+            model = Review
+            fields = ['id','post_id', 'rating', 'comment']
+
+    def get(self, request, format=None):
+        reviewList = Review.objects.filter(is_confirmed=False)
+        serializer = self.ListReviewOfRenterSerializer(reviewList, many=True)
+        return Response(serializer.data)
+
+
+class ConfirmReview(APIView):
+    permission_classes = (IsAuthenticated,)
+    def put(self, request,pk, format=None):
+        review = Review.objects.get(pk=pk)
+        review.is_confirmed = True
+        review.save()
+        return Response(f'ok')
